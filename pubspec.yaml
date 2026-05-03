@@ -1,0 +1,44 @@
+name: spendly
+description: A dark, sleek expense tracker app
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  # Firebase
+  firebase_core: ^3.3.0
+  firebase_auth: ^5.1.4
+  cloud_firestore: ^5.2.1
+  # Utilities
+  uuid: ^4.4.2
+  shared_preferences: ^2.3.2
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Animations
+  animate_do: ^3.3.4
+
+  # UI Helpers
+  gap: ^3.0.1
+  iconsax: ^0.0.8
+
+  # Utilities
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
