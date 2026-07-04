@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../dashboard/screens/main_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -37,7 +37,7 @@ class _AuthScreenState extends State<AuthScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.expense,
+        backgroundColor: context.colors.expense,
       ),
     );
   }
@@ -53,7 +53,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          MaterialPageRoute(builder: (_) => const MainScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -85,9 +85,9 @@ class _AuthScreenState extends State<AuthScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created! Please sign in.'),
-            backgroundColor: AppColors.primary,
+          SnackBar(
+            content: const Text('Account created! Please sign in.'),
+            backgroundColor: context.colors.primary,
           ),
         );
         setState(() {
@@ -121,7 +121,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: const TextScaler.linear(1.0),
@@ -152,7 +152,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             width: 56,
                             height: 56,
                             decoration: BoxDecoration(
-                              color: AppColors.primaryContainer,
+                              color: context.colors.primaryContainer,
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: const Center(
@@ -165,10 +165,10 @@ class _AuthScreenState extends State<AuthScreen> {
                           const SizedBox(height: 12),
                           Text(
                             _isLogin ? 'Welcome back' : 'Create account',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: context.colors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -176,9 +176,9 @@ class _AuthScreenState extends State<AuthScreen> {
                             _isLogin
                                 ? 'Login to your account'
                                 : 'Start tracking your money',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: AppColors.textSecondary,
+                              color: context.colors.textSecondary,
                             ),
                           ),
                         ],
@@ -190,7 +190,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     // Toggle
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(
                           AppSpacing.borderRadiusSm,
                         ),
@@ -334,9 +334,9 @@ class _AuthScreenState extends State<AuthScreen> {
                               );
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Reset email sent'),
-                                    backgroundColor: AppColors.primary,
+                                  SnackBar(
+                                    content: const Text('Reset email sent'),
+                                    backgroundColor: context.colors.primary,
                                   ),
                                 );
                               }
@@ -372,53 +372,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
-
-                    // Divider
-                    const Row(
-                      children: [
-                        Expanded(child: Divider()),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('or'),
-                        ),
-                        Expanded(child: Divider()),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Google button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton(
-                        onPressed: () {},
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Continue with Google'),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Text(
-                                'G',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
                     const SizedBox(height: 20),
 
                     // Switch login/signup
@@ -429,8 +382,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           _isLogin
                               ? "Don't have an account? Sign Up"
                               : 'Already have an account? Login',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+                          style: TextStyle(
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ),
@@ -455,14 +408,14 @@ class _AuthScreenState extends State<AuthScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: active ? AppColors.primary : Colors.transparent,
+            color: active ? context.colors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
-                color: active ? Colors.black : AppColors.textSecondary,
+                color: active ? Colors.black : context.colors.textSecondary,
               ),
             ),
           ),
@@ -474,10 +427,10 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget _label(String text) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w500,
-        color: AppColors.textSecondary,
+        color: context.colors.textSecondary,
       ),
     );
   }

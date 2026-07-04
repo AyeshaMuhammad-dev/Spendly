@@ -5,11 +5,12 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../features/transactions/data/transaction_model.dart';
 import '../../../features/transactions/providers/transaction_provider.dart';
+import '../../dashboard/screens/main_screen.dart';
 import '../../transactions/screens/add_expense_screen.dart';
 import '../../transactions/screens/transactions_screen.dart';
 import '../../budget/screens/budget_screen.dart';
 import '../../analytics/screens/analytics_screen.dart';
-import '../../settings/screens/settings_screen.dart';
+import '../../../core/providers/settings_provider.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -19,7 +20,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  int _currentIndex = 0;
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -66,18 +66,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final balance = ref.watch(balanceProvider);
     final totalIncome = ref.watch(totalIncomeProvider);
     final totalExpense = ref.watch(totalExpenseProvider);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: transactionsAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: context.colors.primary),
           ),
           error: (e, _) => Center(
             child: Text(
               'Error: $e',
-              style: const TextStyle(color: AppColors.expense),
+              style: TextStyle(color: context.colors.expense),
             ),
           ),
           data: (transactions) {
@@ -89,7 +90,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 20),
-                  _buildBalanceCard(balance, totalIncome, totalExpense),
+                  _buildBalanceCard(balance, totalIncome, totalExpense, currencySymbol),
                   const SizedBox(height: 20),
                   _buildQuickActions(),
                   const SizedBox(height: 24),
@@ -103,7 +104,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           },
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -122,18 +122,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             Text(
               _getGreeting(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: context.colors.textSecondary,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               '$name 👋',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
           ],
@@ -146,6 +146,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       double balance,
       double totalIncome,
       double totalExpense,
+      String currencySymbol,
       ) {
     return Container(
       width: double.infinity,
@@ -161,25 +162,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Total Balance',
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Rs ${balance.toStringAsFixed(0)}',
-            style: const TextStyle(
+            balance < -0.5
+                ? '- $currencySymbol ${balance.abs().toStringAsFixed(0)}'
+                : '$currencySymbol ${balance.abs().toStringAsFixed(0)}',
+            style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: balance < -0.5
+                  ? context.colors.expense
+                  : context.colors.textPrimary,
               letterSpacing: -1,
             ),
           ),
           const SizedBox(height: 16),
-          const Divider(color: AppColors.divider),
+          Divider(color: context.colors.divider),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -187,20 +192,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Income',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Rs ${totalIncome.toStringAsFixed(0)}',
-                      style: const TextStyle(
+                      '$currencySymbol ${totalIncome.toStringAsFixed(0)}',
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.income,
+                        color: context.colors.income,
                       ),
                     ),
                   ],
@@ -210,20 +215,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Expenses',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Rs ${totalExpense.toStringAsFixed(0)}',
-                      style: const TextStyle(
+                      '$currencySymbol ${totalExpense.toStringAsFixed(0)}',
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.expense,
+                        color: context.colors.expense,
                       ),
                     ),
                   ],
@@ -266,7 +271,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: context.colors.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -276,9 +281,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const SizedBox(height: 4),
                   Text(
                     action['label']!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.textSecondary,
+                      color: context.colors.textSecondary,
                     ),
                   ),
                 ],
@@ -300,19 +305,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Last 7 days',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
           ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(AppSpacing.cardPadding),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.colors.surface,
             borderRadius:
             BorderRadius.circular(AppSpacing.borderRadius),
           ),
@@ -340,8 +345,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 3),
                         decoration: BoxDecoration(
                           color: isHighest
-                              ? AppColors.primary
-                              : AppColors.primary.withOpacity(0.3),
+                              ? context.colors.primary
+                              : context.colors.primary.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -354,8 +359,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               ? FontWeight.w700
                               : FontWeight.w400,
                           color: isToday
-                              ? AppColors.primary
-                              : AppColors.textTertiary,
+                              ? context.colors.primary
+                              : context.colors.textTertiary,
                         ),
                       ),
                     ],
@@ -373,6 +378,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildRecentTransactions(List<TransactionModel> transactions) {
     final recent =
     transactions.where((t) => t.isExpense).take(5).toList();
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,12 +386,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Recent',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
             TextButton(
@@ -394,41 +400,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 MaterialPageRoute(
                     builder: (_) => const TransactionsScreen()),
               ),
-              child: const Text(
+              child: Text(
                 'See all',
                 style:
-                TextStyle(color: AppColors.primary, fontSize: 13),
+                TextStyle(color: context.colors.primary, fontSize: 13),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         recent.isEmpty
-            ? const Center(
+            ? Center(
           child: Padding(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             child: Text(
               'No expenses yet\nTap + to add one',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.colors.textSecondary),
             ),
           ),
         )
             : Column(
           children: recent
-              .map((t) => _buildTransactionRow(t))
+              .map((t) => _buildTransactionRow(t, currencySymbol))
               .toList(),
         ),
       ],
     );
   }
 
-  Widget _buildTransactionRow(TransactionModel t) {
+  Widget _buildTransactionRow(TransactionModel t, String currencySymbol) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppColors.divider, width: 0.5),
+          bottom: BorderSide(color: context.colors.divider, width: 0.5),
         ),
       ),
       child: Row(
@@ -437,7 +443,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.expenseContainer,
+              color: context.colors.expenseContainer,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -452,28 +458,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 Text(
                   t.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    color: context.colors.textPrimary,
                   ),
                 ),
                 Text(
                   _formatDate(t.date),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: context.colors.textSecondary,
                   ),
                 ),
               ],
             ),
           ),
           Text(
-            'Rs ${t.amount.toStringAsFixed(0)}',
-            style: const TextStyle(
+            '$currencySymbol ${t.amount.toStringAsFixed(0)}',
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.expense,
+              color: context.colors.expense,
             ),
           ),
         ],
@@ -481,75 +487,4 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildBottomNav() {
-    final items = [
-      {'icon': Icons.home_rounded, 'label': 'Home'},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Txns'},
-      {'icon': Icons.settings_rounded, 'label': 'Settings'},
-    ];
-
-    return Container(
-      height: 70,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          top: BorderSide(color: AppColors.divider, width: 0.5),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(items.length, (i) {
-          final isActive = _currentIndex == i;
-          return GestureDetector(
-            onTap: () async {
-              setState(() => _currentIndex = i);
-              if (i == 1) {
-                await Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const TransactionsScreen(),
-                    transitionDuration: Duration.zero,
-                    reverseTransitionDuration: Duration.zero,
-                  ),
-                );
-                if (mounted) setState(() => _currentIndex = 0);
-              } else if (i == 2) {
-                await Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const SettingsScreen(),
-                    transitionDuration: Duration.zero,
-                    reverseTransitionDuration: Duration.zero,
-                  ),
-                );
-                if (mounted) setState(() => _currentIndex = 0);
-              }
-            },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  items[i]['icon'] as IconData,
-                  color: isActive
-                      ? AppColors.primary
-                      : AppColors.textTertiary,
-                  size: 22,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  items[i]['label'] as String,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isActive
-                        ? AppColors.primary
-                        : AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ),
-    );
-  }
 }

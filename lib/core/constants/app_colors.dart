@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  AppColors._();
+  const AppColors();
 
   static const background     = Color(0xFF0D0D0D);
   static const surface        = Color(0xFF1A1A1A);
@@ -31,4 +31,41 @@ class AppColors {
   static const catEntertainment = Color(0xFFA855F7);
   static const catBills         = Color(0xFFFFB020);
   static const catOther         = Color(0xFF9E9E9E);
+
+  // Instance getters for context.colors access
+  Color get backgroundProp => background;
+  Color get surfaceProp => surface;
+  // ... this is getting messy. Let's use a better approach.
+}
+
+extension AppColorsExtension on BuildContext {
+  _AppColorsProxy get colors => const _AppColorsProxy();
+}
+
+class _AppColorsProxy {
+  const _AppColorsProxy();
+
+  Color get background => AppColors.background;
+  Color get surface => AppColors.surface;
+  Color get surfaceVariant => AppColors.surfaceVariant;
+  Color get elevated => AppColors.elevated;
+  Color get primary => AppColors.primary;
+  Color get primaryDark => AppColors.primaryDark;
+  Color get primaryContainer => AppColors.primaryContainer;
+  Color get income => AppColors.income;
+  Color get expense => AppColors.expense;
+  Color get expenseContainer => AppColors.expenseContainer;
+  Color get textPrimary => AppColors.textPrimary;
+  Color get textSecondary => AppColors.textSecondary;
+  Color get textTertiary => AppColors.textTertiary;
+  Color get divider => AppColors.divider;
+  Color get error => AppColors.error;
+  Color get warning => AppColors.warning;
+  Color get catFood => AppColors.catFood;
+  Color get catTransport => AppColors.catTransport;
+  Color get catShopping => AppColors.catShopping;
+  Color get catHealth => AppColors.catHealth;
+  Color get catEntertainment => AppColors.catEntertainment;
+  Color get catBills => AppColors.catBills;
+  Color get catOther => AppColors.catOther;
 }

@@ -4,6 +4,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../features/transactions/providers/transaction_provider.dart';
 import '../data/budget_repository.dart';
+import '../../../core/providers/settings_provider.dart';
+import '../../transactions/screens/add_expense_screen.dart';
 
 // Budget repository provider
 final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
@@ -28,23 +30,23 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
   late List<Animation<double>> _animations;
 
   // Default budget categories with limits
-  final List<Map<String, dynamic>> _categories = [
-    {'icon': '🍔', 'label': 'Food', 'color': AppColors.catFood},
-    {'icon': '🚗', 'label': 'Transport', 'color': AppColors.catTransport},
-    {'icon': '🛍️', 'label': 'Shopping', 'color': AppColors.catShopping},
-    {'icon': '💊', 'label': 'Health', 'color': AppColors.catHealth},
-    {'icon': '🎮', 'label': 'Fun', 'color': AppColors.catEntertainment},
-    {'icon': '🏠', 'label': 'Bills', 'color': AppColors.catBills},
+  List<Map<String, dynamic>> get _categories => [
+    {'icon': '🍔', 'label': 'Food', 'color': context.colors.catFood},
+    {'icon': '🚗', 'label': 'Transport', 'color': context.colors.catTransport},
+    {'icon': '🛍️', 'label': 'Shopping', 'color': context.colors.catShopping},
+    {'icon': '💊', 'label': 'Health', 'color': context.colors.catHealth},
+    {'icon': '🎮', 'label': 'Fun', 'color': context.colors.catEntertainment},
+    {'icon': '🏠', 'label': 'Bills', 'color': context.colors.catBills},
   ];
 
-  // Default budget limits
+  // Default budget limits (Start with 0, user sets them)
   Map<String, double> _limits = {
-    'Food': 5000,
-    'Transport': 2000,
-    'Shopping': 8000,
-    'Health': 2000,
-    'Fun': 3000,
-    'Bills': 3000,
+    'Food': 0,
+    'Transport': 0,
+    'Shopping': 0,
+    'Health': 0,
+    'Fun': 0,
+    'Bills': 0,
   };
 
   @override
@@ -71,8 +73,8 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
     _animations = _categories.map((c) {
       final label = c['label'] as String;
       final spent = spentMap[label] ?? 0;
-      final limit = _limits[label] ?? 1;
-      final pct = (spent / limit).clamp(0.0, 1.0);
+      final limit = _limits[label] ?? 0;
+      final pct = limit > 0 ? (spent / limit).clamp(0.0, 1.0) : 0.0;
       return Tween<double>(begin: 0, end: pct).animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeOut),
       );
@@ -83,9 +85,9 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
 
   Color _barColor(double spent, double total) {
     final pct = spent / total;
-    if (pct >= 1.0) return AppColors.expense;
-    if (pct >= 0.9) return AppColors.warning;
-    return AppColors.income;
+    if (pct >= 1.0) return context.colors.expense;
+    if (pct >= 0.9) return context.colors.warning;
+    return context.colors.income;
   }
 
   // Calculate spent per category from real transactions
@@ -103,25 +105,26 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
     final controller = TextEditingController(
       text: _limits[category]?.toStringAsFixed(0) ?? '0',
     );
+    final currencySymbol = ref.read(currencySymbolProvider);
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colors.surface,
         title: Text(
           'Edit $category Budget',
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: TextStyle(
+            color: context.colors.textPrimary,
             fontSize: 16,
           ),
         ),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: const InputDecoration(
+          style: TextStyle(color: context.colors.textPrimary),
+          decoration: InputDecoration(
             hintText: 'Enter budget amount',
-            prefixText: 'Rs ',
+            prefixText: '$currencySymbol ',
           ),
         ),
         actions: [
@@ -152,6 +155,15 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
   Widget build(BuildContext context) {
     final transactionsAsync = ref.watch(monthlyTransactionsProvider);
     final budgetLimitsAsync = ref.watch(budgetLimitsProvider);
+    final totalIncome = ref.watch(totalIncomeProvider);
+
+    // Listen to transaction changes to update animations safely
+    ref.listen(monthlyTransactionsProvider, (previous, next) {
+      next.whenData((transactions) {
+        final spentMap = _calculateSpent(transactions);
+        _updateAnimations(spentMap);
+      });
+    });
 
     // Update limits from Firestore if available
     budgetLimitsAsync.whenData((limits) {
@@ -161,7 +173,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -171,19 +183,19 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(
+                    child: Icon(
                       Icons.arrow_back_ios,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Budget',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                 ],
@@ -191,23 +203,21 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
             ),
             Expanded(
               child: transactionsAsync.when(
-                loading: () => const Center(
+                loading: () => Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.primary,
+                    color: context.colors.primary,
                   ),
                 ),
                 error: (e, _) => Center(
                   child: Text(
                     'Error: $e',
-                    style: const TextStyle(color: AppColors.expense),
+                    style: TextStyle(color: context.colors.expense),
                   ),
                 ),
                 data: (transactions) {
                   final spentMap = _calculateSpent(transactions);
-                  _updateAnimations(spentMap);
-
-                  final totalBudget =
-                  _limits.values.fold(0.0, (a, b) => a + b);
+                  
+                  final totalBudget = totalIncome;
                   final totalSpent =
                   spentMap.values.fold(0.0, (a, b) => a + b);
 
@@ -223,7 +233,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                           padding:
                           const EdgeInsets.all(AppSpacing.cardPadding),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: context.colors.surface,
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadius,
                             ),
@@ -231,12 +241,59 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Monthly Overview',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary,
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Monthly Overview',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: context.colors.textSecondary,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AddExpenseScreen(
+                                          initialIsExpense: false,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: context.colors.income.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: context.colors.income.withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.add_circle_outline,
+                                            size: 14,
+                                            color: context.colors.income,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Add Income',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: context.colors.income,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 10),
                               Row(
@@ -247,19 +304,19 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                     crossAxisAlignment:
                                     CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'Total Budget',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: AppColors.textSecondary,
+                                          color: context.colors.textSecondary,
                                         ),
                                       ),
                                       Text(
-                                        'Rs ${totalBudget.toStringAsFixed(0)}',
-                                        style: const TextStyle(
+                                        '${ref.watch(currencySymbolProvider)} ${totalBudget.toStringAsFixed(0)}',
+                                        style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary,
+                                          color: context.colors.textPrimary,
                                         ),
                                       ),
                                     ],
@@ -268,19 +325,19 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                     crossAxisAlignment:
                                     CrossAxisAlignment.end,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'Total Spent',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: AppColors.textSecondary,
+                                          color: context.colors.textSecondary,
                                         ),
                                       ),
                                       Text(
-                                        'Rs ${totalSpent.toStringAsFixed(0)}',
-                                        style: const TextStyle(
+                                        '${ref.watch(currencySymbolProvider)} ${totalSpent.toStringAsFixed(0)}',
+                                        style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.expense,
+                                          color: context.colors.expense,
                                         ),
                                       ),
                                     ],
@@ -296,7 +353,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                       .clamp(0.0, 1.0)
                                       : 0,
                                   minHeight: 8,
-                                  backgroundColor: AppColors.surfaceVariant,
+                                  backgroundColor: context.colors.surfaceVariant,
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     _barColor(totalSpent, totalBudget),
                                   ),
@@ -304,10 +361,10 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Rs ${(totalBudget - totalSpent).toStringAsFixed(0)} remaining',
-                                style: const TextStyle(
+                                '${ref.watch(currencySymbolProvider)} ${(totalBudget - totalSpent).toStringAsFixed(0)} remaining',
+                                style: TextStyle(
                                   fontSize: 11,
-                                  color: AppColors.textSecondary,
+                                  color: context.colors.textSecondary,
                                 ),
                               ),
                             ],
@@ -321,9 +378,9 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                           final c = _categories[i];
                           final label = c['label'] as String;
                           final spent = spentMap[label] ?? 0;
-                          final total = _limits[label] ?? 1;
-                          final pct = spent / total;
-                          final isOver = pct >= 1.0;
+                          final total = _limits[label] ?? 0;
+                          final pct = total > 0 ? (spent / total) : 0.0;
+                          final isOver = total > 0 && pct >= 1.0;
 
                           return AnimatedBuilder(
                             animation: _animations[i],
@@ -334,13 +391,13 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                   AppSpacing.cardPadding,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface,
+                                  color: context.colors.surface,
                                   borderRadius: BorderRadius.circular(
                                     AppSpacing.borderRadius,
                                   ),
                                   border: isOver
                                       ? Border.all(
-                                    color: AppColors.expense
+                                    color: context.colors.expense
                                         .withOpacity(0.4),
                                     width: 1,
                                   )
@@ -352,7 +409,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                       children: [
                                         Text(
                                           c['icon'],
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 22,
                                           ),
                                         ),
@@ -364,17 +421,17 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                             children: [
                                               Text(
                                                 label,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w500,
-                                                  color: AppColors.textPrimary,
+                                                  color: context.colors.textPrimary,
                                                 ),
                                               ),
                                               Text(
-                                                'Rs ${spent.toStringAsFixed(0)} / Rs ${total.toStringAsFixed(0)}',
-                                                style: const TextStyle(
+                                                '${ref.watch(currencySymbolProvider)} ${spent.toStringAsFixed(0)} / ${ref.watch(currencySymbolProvider)} ${total.toStringAsFixed(0)}',
+                                                style: TextStyle(
                                                   fontSize: 12,
-                                                  color: AppColors.textSecondary,
+                                                  color: context.colors.textSecondary,
                                                 ),
                                               ),
                                             ],
@@ -389,7 +446,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                               vertical: 4,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: AppColors.surfaceVariant,
+                                              color: context.colors.surfaceVariant,
                                               borderRadius:
                                               BorderRadius.circular(6),
                                             ),
@@ -414,7 +471,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                                         value: _animations[i].value,
                                         minHeight: 6,
                                         backgroundColor:
-                                        AppColors.surfaceVariant,
+                                        context.colors.surfaceVariant,
                                         valueColor:
                                         AlwaysStoppedAnimation<Color>(
                                           _barColor(spent, total),

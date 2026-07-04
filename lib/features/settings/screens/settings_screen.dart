@@ -1,10 +1,17 @@
+import 'dart:io';
+import 'package:csv/csv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../../../core/providers/theme_provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../auth/screens/auth_screen.dart';
+import '../../transactions/providers/transaction_provider.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -15,10 +22,24 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _notificationsEnabled = true;
-  String _selectedCurrency = 'PKR';
+  String _appVersion = 'Loading...';
 
   final List<String> _currencies = ['PKR', 'USD', 'EUR', 'GBP'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = '${info.version} (${info.buildNumber})';
+      });
+    }
+  }
 
   // Real Firebase user data
   String get _userName {
@@ -30,10 +51,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return FirebaseAuth.instance.currentUser?.email ?? '';
   }
 
+  String? get _photoUrl => null;
+
   void _showCurrencyPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -47,32 +70,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: context.colors.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Select Currency',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
             ..._currencies.map(
                   (c) => GestureDetector(
                 onTap: () {
-                  setState(() => _selectedCurrency = c);
+                  ref.read(currencyProvider.notifier).setCurrency(c);
                   Navigator.pop(context);
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: AppColors.divider,
+                        color: context.colors.divider,
                         width: 0.5,
                       ),
                     ),
@@ -82,15 +105,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Text(
                         c,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: AppColors.textPrimary,
+                          color: context.colors.textPrimary,
                         ),
                       ),
-                      if (_selectedCurrency == c)
-                        const Icon(
+                      if (ref.watch(currencyProvider) == c)
+                        Icon(
                           Icons.check,
-                          color: AppColors.primary,
+                          color: context.colors.primary,
                           size: 20,
                         ),
                     ],
@@ -110,18 +133,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
+        backgroundColor: context.colors.surface,
+        title: Text(
           'Log Out',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
             fontSize: 16,
           ),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to log out?',
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: context.colors.textSecondary,
             fontSize: 14,
           ),
         ),
@@ -144,7 +167,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.expense,
+              backgroundColor: context.colors.expense,
               foregroundColor: Colors.white,
             ),
             child: const Text('Log Out'),
@@ -154,22 +177,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showDeleteDialog() {
+  void _showClearDataDialog() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          'Delete Account',
+        backgroundColor: context.colors.surface,
+        title: Text(
+          'Fresh Start',
           style: TextStyle(
-            color: AppColors.expense,
+            color: context.colors.expense,
             fontSize: 16,
           ),
         ),
-        content: const Text(
-          'This will permanently delete your account and all data. This cannot be undone.',
+        content: Text(
+          'This will permanently delete all your transactions (income and expenses). This cannot be undone. Do you want to proceed?',
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: context.colors.textSecondary,
             fontSize: 14,
           ),
         ),
@@ -182,12 +205,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await FirebaseAuth.instance.currentUser?.delete();
+                await ref.read(addTransactionProvider.notifier).deleteAllTransactions();
                 if (mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AuthScreen()),
-                        (route) => false,
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('All data cleared successfully'),
+                      backgroundColor: context.colors.primary,
+                    ),
                   );
                 }
               } catch (e) {
@@ -195,19 +219,280 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error: $e'),
-                      backgroundColor: AppColors.expense,
+                      backgroundColor: context.colors.expense,
                     ),
                   );
                 }
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.expense,
+              backgroundColor: context.colors.expense,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete'),
+            child: const Text('Clear All'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _exportData() async {
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      final transactions = await repo.getAllTransactionsFuture();
+      
+      if (transactions.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No data to export')),
+          );
+        }
+        return;
+      }
+
+      List<List<dynamic>> rows = [
+        ['Date', 'Title', 'Category', 'Amount', 'Type', 'Note']
+      ];
+
+      for (var t in transactions) {
+        rows.add([
+          t.date.toIso8601String(),
+          t.title,
+          t.category,
+          t.amount,
+          t.isExpense ? 'Expense' : 'Income',
+          t.note ?? ''
+        ]);
+      }
+
+      String csvData = const ListToCsvConverter().convert(rows);
+      
+      final directory = await getTemporaryDirectory();
+      final file = File('${directory.path}/spendly_export.csv');
+      await file.writeAsString(csvData);
+
+      final xFile = XFile(file.path);
+      await Share.shareXFiles([xFile], text: 'My Spendly Data Export');
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting data: $e'),
+            backgroundColor: context.colors.expense,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickNotificationTime() async {
+    final currentTime = ref.read(notificationTimeProvider);
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: currentTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: context.colors.primary,
+              onPrimary: Colors.white,
+              surface: context.colors.surface,
+              onSurface: context.colors.textPrimary,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: context.colors.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != currentTime) {
+      await ref.read(notificationTimeProvider.notifier).setNotificationTime(picked);
+      // Reschedule if notifications are enabled
+      await ref.read(notificationsProvider.notifier).reschedule();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Notification time updated to ${picked.format(context)}'),
+            backgroundColor: context.colors.primary,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showReauthDialog(VoidCallback onReauthenticated) {
+    final controller = TextEditingController();
+    bool isReauthLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: context.colors.surface,
+          title: Text(
+            'Confirm Password',
+            style: TextStyle(color: context.colors.textPrimary, fontSize: 16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'For security, please enter your password to continue.',
+                style: TextStyle(color: context.colors.textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                obscureText: true,
+                style: TextStyle(color: context.colors.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'Enter password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+              if (isReauthLoading) ...[
+                const SizedBox(height: 16),
+                const CircularProgressIndicator(),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isReauthLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isReauthLoading
+                  ? null
+                  : () async {
+                if (controller.text.isEmpty) return;
+                setDialogState(() => isReauthLoading = true);
+                try {
+                  await ref
+                      .read(addTransactionProvider.notifier)
+                      .reauthenticate(controller.text.trim());
+                  if (mounted) {
+                    Navigator.pop(context);
+                    onReauthenticated();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Invalid password'),
+                        backgroundColor: context.colors.expense,
+                      ),
+                    );
+                  }
+                } finally {
+                  if (mounted) setDialogState(() => isReauthLoading = false);
+                }
+              },
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isLoading = ref.watch(addTransactionProvider).isLoading;
+
+          return AlertDialog(
+            backgroundColor: context.colors.surface,
+            title: Text(
+              'Delete Account',
+              style: TextStyle(
+                color: context.colors.expense,
+                fontSize: 16,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This will permanently delete your account and all data. This cannot be undone.',
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                if (isLoading) ...[
+                  const SizedBox(height: 20),
+                  Center(
+                    child: CircularProgressIndicator(
+                      color: context.colors.expense,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                  try {
+                    await ref
+                        .read(addTransactionProvider.notifier)
+                        .deleteAccount();
+
+                    if (mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AuthScreen()),
+                            (route) => false,
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      if (e is FirebaseAuthException &&
+                          e.code == 'requires-recent-login') {
+                        Navigator.pop(context); // Close delete dialog
+                        _showReauthDialog(() {
+                          _showDeleteDialog(); // Re-open delete dialog after re-auth
+                        });
+                        return;
+                      }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: context.colors.expense,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.expense,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -215,7 +500,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -224,21 +509,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: const EdgeInsets.all(AppSpacing.pagePadding),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(
-                      Icons.arrow_back_ios,
-                      color: AppColors.textPrimary,
-                      size: 20,
+                  if (Navigator.of(context).canPop())
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(
+                          Icons.arrow_back_ios,
+                          color: context.colors.textPrimary,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Settings',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                 ],
@@ -258,28 +546,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         padding:
                         const EdgeInsets.all(AppSpacing.cardPadding),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: context.colors.surface,
                           borderRadius: BorderRadius.circular(
                             AppSpacing.borderRadius,
                           ),
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryContainer,
-                                borderRadius: BorderRadius.circular(26),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  '👤',
-                                  style: TextStyle(fontSize: 22),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 4), // Small padding instead of icon
                             Expanded(
                               child: Column(
                                 crossAxisAlignment:
@@ -287,32 +561,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 children: [
                                   Text(
                                     _userName,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
+                                      color: context.colors.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     _userEmail,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: AppColors.textSecondary,
+                                      color: context.colors.textSecondary,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                             GestureDetector(
-                              onTap: () {
-                                Navigator.push(
+                              onTap: () async {
+                                final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
                                     const EditProfileScreen(),
                                   ),
                                 );
+                                if (result == true && mounted) {
+                                  setState(() {}); // Refresh to show new photo/name
+                                }
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -320,14 +597,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primaryContainer,
+                                  color: context.colors.primaryContainer,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Edit',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.primary,
+                                    color: context.colors.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -345,10 +622,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       icon: '💱',
                       iconBg: const Color(0xFF1a2a1a),
                       title: 'Currency',
-                      subtitle: _selectedCurrency,
-                      trailing: const Icon(
+                      subtitle: ref.watch(currencyProvider),
+                      trailing: Icon(
                         Icons.chevron_right,
-                        color: AppColors.textTertiary,
+                        color: context.colors.textTertiary,
                         size: 20,
                       ),
                       onTap: _showCurrencyPicker,
@@ -357,64 +634,88 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       icon: '🔔',
                       iconBg: const Color(0xFF2a2a1a),
                       title: 'Notifications',
-                      subtitle: 'Daily reminder at 9 PM',
+                      subtitle: 'Daily reminder at ${ref.watch(notificationTimeProvider).format(context)}',
                       trailing: Switch(
-                        value: _notificationsEnabled,
-                        onChanged: (v) =>
-                            setState(() => _notificationsEnabled = v),
-                        activeColor: AppColors.primary,
+                        value: ref.watch(notificationsProvider),
+                        onChanged: (v) => ref
+                            .read(notificationsProvider.notifier)
+                            .setNotificationsEnabled(v),
+                        activeThumbColor: context.colors.primary,
                       ),
-                      onTap: null,
+                      onTap: _pickNotificationTime,
                     ),
-                    _settingRow(
-                      icon: '🌙',
-                      iconBg: const Color(0xFF1a1a2a),
-                      title: 'Dark Mode',
-                      subtitle: ref.watch(themeProvider) == ThemeMode.dark
-                          ? 'Currently enabled'
-                          : 'Currently disabled',
-                      trailing: Switch(
-                        value: ref.watch(themeProvider) == ThemeMode.dark,
-                        onChanged: (v) =>
-                            ref.read(themeProvider.notifier).setDarkMode(v),
-                        activeColor: AppColors.primary,
-                      ),
-                      onTap: null,
-                    ),
+
 
                     const SizedBox(height: 8),
 
                     _sectionLabel('Data'),
                     _settingRow(
+                      icon: '🔄',
+                      iconBg: const Color(0xFF2a1a1a),
+                      title: 'Fresh Start',
+                      subtitle: 'Clear all transactions',
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: context.colors.textTertiary,
+                        size: 20,
+                      ),
+                      onTap: _showClearDataDialog,
+                    ),
+                    _settingRow(
                       icon: '📤',
                       iconBg: const Color(0xFF1a2a2a),
                       title: 'Export Data',
                       subtitle: 'Download as CSV',
-                      trailing: const Icon(
+                      trailing: Icon(
                         Icons.chevron_right,
-                        color: AppColors.textTertiary,
+                        color: context.colors.textTertiary,
                         size: 20,
                       ),
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Export coming soon'),
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
-                      },
+                      onTap: _exportData,
                     ),
                     _settingRow(
                       icon: '🔒',
                       iconBg: const Color(0xFF2a1a2a),
                       title: 'Privacy',
                       subtitle: 'Biometric lock',
-                      trailing: const Icon(
-                        Icons.chevron_right,
-                        color: AppColors.textTertiary,
-                        size: 20,
+                      trailing: Switch(
+                        value: ref.watch(biometricProvider),
+                        onChanged: (v) async {
+                          if (v) {
+                            // Try to authenticate before enabling
+                            final localAuth = LocalAuthentication();
+                            bool canCheckBiometrics = await localAuth.canCheckBiometrics;
+                            bool isSupported = await localAuth.isDeviceSupported();
+                            
+                            if (canCheckBiometrics || isSupported) {
+                              try {
+                                bool didAuthenticate = await localAuth.authenticate(
+                                  localizedReason: 'Please authenticate to enable biometric lock',
+                                );
+                                if (didAuthenticate) {
+                                  ref.read(biometricProvider.notifier).setBiometricEnabled(true);
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e'), backgroundColor: context.colors.expense),
+                                  );
+                                }
+                              }
+                            } else {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: const Text('Biometrics not supported on this device'), backgroundColor: context.colors.expense),
+                                );
+                              }
+                            }
+                          } else {
+                            ref.read(biometricProvider.notifier).setBiometricEnabled(false);
+                          }
+                        },
+                        activeThumbColor: context.colors.primary,
                       ),
-                      onTap: () {},
+                      onTap: null,
                     ),
 
                     const SizedBox(height: 8),
@@ -422,9 +723,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _sectionLabel('About'),
                     _settingRow(
                       icon: 'ℹ️',
-                      iconBg: AppColors.surfaceVariant,
+                      iconBg: context.colors.surfaceVariant,
                       title: 'App Version',
-                      subtitle: '1.0.0',
+                      subtitle: _appVersion,
                       trailing: null,
                       onTap: null,
                     ),
@@ -443,18 +744,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           padding:
                           const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: AppColors.expenseContainer,
+                            color: context.colors.expenseContainer,
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadiusSm,
                             ),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               'Log Out',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.expense,
+                                color: context.colors.expense,
                               ),
                             ),
                           ),
@@ -470,14 +771,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       child: GestureDetector(
                         onTap: _showDeleteDialog,
-                        child: const Center(
+                        child: Center(
                           child: Text(
                             'Delete Account',
                             style: TextStyle(
                               fontSize: 13,
-                              color: AppColors.textTertiary,
+                              color: context.colors.textTertiary,
                               decoration: TextDecoration.underline,
-                              decorationColor: AppColors.textTertiary,
+                              decorationColor: context.colors.textTertiary,
                             ),
                           ),
                         ),
@@ -503,10 +804,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: AppColors.textTertiary,
+          color: context.colors.textTertiary,
           letterSpacing: 1.5,
         ),
       ),
@@ -528,9 +829,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           horizontal: AppSpacing.pagePadding,
           vertical: 12,
         ),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: AppColors.divider, width: 0.5),
+            bottom: BorderSide(color: context.colors.divider, width: 0.5),
           ),
         ),
         child: Row(
@@ -556,17 +857,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textSecondary,
+                      color: context.colors.textSecondary,
                     ),
                   ),
                 ],

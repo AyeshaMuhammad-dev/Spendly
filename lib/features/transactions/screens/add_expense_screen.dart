@@ -3,16 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../providers/transaction_provider.dart';
+import '../../../core/providers/settings_provider.dart';
 
 class AddExpenseScreen extends ConsumerStatefulWidget {
-  const AddExpenseScreen({super.key});
+  final bool initialIsExpense;
+  const AddExpenseScreen({super.key, this.initialIsExpense = true});
 
   @override
   ConsumerState<AddExpenseScreen> createState() => _AddExpenseScreenState();
 }
 
 class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
-  bool _isExpense = true;
+  late bool _isExpense;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpense = widget.initialIsExpense;
+  }
   int _selectedCategory = 0;
   bool _isLoading = false;
   final _amountController = TextEditingController();
@@ -46,9 +54,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              surface: AppColors.surface,
+            colorScheme: ColorScheme.dark(
+              primary: context.colors.primary,
+              surface: context.colors.surface,
             ),
           ),
           child: child!,
@@ -77,9 +85,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   Future<void> _save() async {
     if (_amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter an amount'),
-          backgroundColor: AppColors.expense,
+        SnackBar(
+          content: const Text('Please enter an amount'),
+          backgroundColor: context.colors.expense,
         ),
       );
       return;
@@ -88,9 +96,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     // For expense, title is required
     if (_isExpense && _titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a title'),
-          backgroundColor: AppColors.expense,
+        SnackBar(
+          content: const Text('Please enter a title'),
+          backgroundColor: context.colors.expense,
         ),
       );
       return;
@@ -99,9 +107,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid amount'),
-          backgroundColor: AppColors.expense,
+        SnackBar(
+          content: const Text('Please enter a valid amount'),
+          backgroundColor: context.colors.expense,
         ),
       );
       return;
@@ -129,9 +137,9 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Transaction saved successfully'),
-            backgroundColor: AppColors.income,
+          SnackBar(
+            content: const Text('Transaction saved successfully'),
+            backgroundColor: context.colors.income,
           ),
         );
         Navigator.pop(context);
@@ -141,7 +149,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: AppColors.expense,
+            backgroundColor: context.colors.expense,
           ),
         );
       }
@@ -153,7 +161,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -167,19 +175,19 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(
+                    child: Icon(
                       Icons.arrow_back_ios,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
                     _isExpense ? 'Add Expense' : 'Add Income',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                 ],
@@ -195,7 +203,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                     // Toggle
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(
                           AppSpacing.borderRadiusSm,
                         ),
@@ -207,13 +215,13 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                             'Expense',
                             _isExpense,
                                 () => setState(() => _isExpense = true),
-                            activeColor: AppColors.expense,
+                            activeColor: context.colors.expense,
                           ),
                           _toggleBtn(
                             'Income',
                             !_isExpense,
                                 () => setState(() => _isExpense = false),
-                            activeColor: AppColors.income,
+                            activeColor: context.colors.income,
                           ),
                         ],
                       ),
@@ -222,11 +230,11 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                     const SizedBox(height: 24),
 
                     // Amount — always visible
-                    const Text(
+                    Text(
                       'Amount',
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -237,7 +245,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: context.colors.surface,
                         borderRadius: BorderRadius.circular(
                           AppSpacing.borderRadius,
                         ),
@@ -245,13 +253,13 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                       child: Row(
                         children: [
                           Text(
-                            'Rs ',
+                            '${ref.watch(currencySymbolProvider)} ',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w500,
                               color: _isExpense
-                                  ? AppColors.expense
-                                  : AppColors.income,
+                                  ? context.colors.expense
+                                  : context.colors.income,
                             ),
                           ),
                           Expanded(
@@ -262,16 +270,16 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
                                 color: _isExpense
-                                    ? AppColors.expense
-                                    : AppColors.income,
+                                    ? context.colors.expense
+                                    : context.colors.income,
                                 letterSpacing: -0.5,
                               ),
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 hintText: '0',
                                 hintStyle: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.textTertiary,
+                                  color: context.colors.textTertiary,
                                 ),
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
@@ -290,11 +298,11 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                       const SizedBox(height: 24),
 
                       // Category
-                      const Text(
+                      Text(
                         'Category',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -318,12 +326,12 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                               duration: const Duration(milliseconds: 200),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.primaryContainer
-                                    : AppColors.surface,
+                                    ? context.colors.primaryContainer
+                                    : context.colors.surface,
                                 borderRadius: BorderRadius.circular(16),
                                 border: isSelected
                                     ? Border.all(
-                                  color: AppColors.primary,
+                                  color: context.colors.primary,
                                   width: 1.5,
                                 )
                                     : null,
@@ -341,8 +349,8 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.textSecondary,
+                                          ? context.colors.primary
+                                          : context.colors.textSecondary,
                                       fontWeight: isSelected
                                           ? FontWeight.w600
                                           : FontWeight.w400,
@@ -358,22 +366,22 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                       const SizedBox(height: 20),
 
                       // Title
-                      const Text(
+                      Text(
                         'Title',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _titleController,
                         style:
-                        const TextStyle(color: AppColors.textPrimary),
+                        TextStyle(color: context.colors.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'e.g. Lunch at cafe',
                           filled: true,
-                          fillColor: AppColors.surface,
+                          fillColor: context.colors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadius,
@@ -395,24 +403,24 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                             vertical: 14,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: context.colors.surface,
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadius,
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.calendar_today_outlined,
-                                color: AppColors.textSecondary,
+                                color: context.colors.textSecondary,
                                 size: 18,
                               ),
                               const SizedBox(width: 10),
                               Text(
                                 _formattedDate,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: AppColors.textPrimary,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
                             ],
@@ -428,20 +436,20 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryContainer,
+                          color: context.colors.primaryContainer,
                           borderRadius: BorderRadius.circular(
                             AppSpacing.borderRadius,
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Text('💰', style: TextStyle(fontSize: 18)),
-                            SizedBox(width: 10),
+                            const Text('💰', style: TextStyle(fontSize: 18)),
+                            const SizedBox(width: 10),
                             Text(
                               'Income will be added to your balance',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.primary,
+                                color: context.colors.primary,
                               ),
                             ),
                           ],
@@ -459,8 +467,8 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                         onPressed: _isLoading ? null : _save,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isExpense
-                              ? AppColors.expense
-                              : AppColors.income,
+                              ? context.colors.expense
+                              : context.colors.income,
                           foregroundColor: Colors.white,
                         ),
                         child: _isLoading
@@ -517,7 +525,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: active ? Colors.black : AppColors.textSecondary,
+                color: active ? Colors.black : context.colors.textSecondary,
               ),
             ),
           ),

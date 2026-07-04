@@ -23,7 +23,7 @@ StreamProvider<List<TransactionModel>>((ref) {
   return repo.getMonthlyTransactions();
 });
 
-// Total income this month
+// Total income this month (for display on dashboard card)
 final totalIncomeProvider = Provider<double>((ref) {
   final transactions = ref.watch(monthlyTransactionsProvider).valueOrNull ?? [];
   return transactions
@@ -31,7 +31,7 @@ final totalIncomeProvider = Provider<double>((ref) {
       .fold(0.0, (sum, t) => sum + t.amount);
 });
 
-// Total expense this month
+// Total expense this month (for display on dashboard card)
 final totalExpenseProvider = Provider<double>((ref) {
   final transactions = ref.watch(monthlyTransactionsProvider).valueOrNull ?? [];
   return transactions
@@ -39,10 +39,26 @@ final totalExpenseProvider = Provider<double>((ref) {
       .fold(0.0, (sum, t) => sum + t.amount);
 });
 
-// Balance
+// All-time total income (used for balance calculation)
+final allTimeIncomeProvider = Provider<double>((ref) {
+  final transactions = ref.watch(transactionsStreamProvider).valueOrNull ?? [];
+  return transactions
+      .where((t) => !t.isExpense)
+      .fold(0.0, (sum, t) => sum + t.amount);
+});
+
+// All-time total expense (used for balance calculation)
+final allTimeExpenseProvider = Provider<double>((ref) {
+  final transactions = ref.watch(transactionsStreamProvider).valueOrNull ?? [];
+  return transactions
+      .where((t) => t.isExpense)
+      .fold(0.0, (sum, t) => sum + t.amount);
+});
+
+// Balance = all-time income minus all-time expenses
 final balanceProvider = Provider<double>((ref) {
-  final income = ref.watch(totalIncomeProvider);
-  final expense = ref.watch(totalExpenseProvider);
+  final income = ref.watch(allTimeIncomeProvider);
+  final expense = ref.watch(allTimeExpenseProvider);
   return income - expense;
 });
 
@@ -84,6 +100,46 @@ class AddTransactionNotifier extends StateNotifier<AsyncValue<void>> {
 
   Future<void> deleteTransaction(String id) async {
     await _repo.deleteTransaction(id);
+  }
+
+  Future<void> deleteAllTransactions() async {
+    state = const AsyncValue.loading();
+    try {
+      await _repo.deleteAllTransactions();
+      state = const AsyncValue.data(null);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    state = const AsyncValue.loading();
+    try {
+      // 1. Delete all data from Firestore and Storage
+      await _repo.deleteUserAllData();
+      
+      // 2. Delete the user account from Firebase Auth
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await user.delete();
+      }
+      
+      state = const AsyncValue.data(null);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+      rethrow;
+    }
+  }
+
+  Future<void> reauthenticate(String password) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.email != null) {
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+    }
   }
 }
 

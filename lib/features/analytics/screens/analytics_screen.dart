@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../features/transactions/data/transaction_model.dart';
 import '../../../features/transactions/providers/transaction_provider.dart';
+import '../../../core/providers/settings_provider.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -21,15 +22,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
-  final List<Map<String, dynamic>> _categoryMeta = [
-    {'icon': '🍔', 'label': 'Food', 'color': AppColors.catFood},
-    {'icon': '🚗', 'label': 'Transport', 'color': AppColors.catTransport},
-    {'icon': '🛍️', 'label': 'Shopping', 'color': AppColors.catShopping},
-    {'icon': '💊', 'label': 'Health', 'color': AppColors.catHealth},
-    {'icon': '🎮', 'label': 'Fun', 'color': AppColors.catEntertainment},
-    {'icon': '🏠', 'label': 'Bills', 'color': AppColors.catBills},
-    {'icon': '💰', 'label': 'Salary', 'color': AppColors.primary},
-    {'icon': '📦', 'label': 'Other', 'color': AppColors.catOther},
+  List<Map<String, dynamic>> get _categoryMeta => [
+    {'icon': '🍔', 'label': 'Food', 'color': context.colors.catFood},
+    {'icon': '🚗', 'label': 'Transport', 'color': context.colors.catTransport},
+    {'icon': '🛍️', 'label': 'Shopping', 'color': context.colors.catShopping},
+    {'icon': '💊', 'label': 'Health', 'color': context.colors.catHealth},
+    {'icon': '🎮', 'label': 'Fun', 'color': context.colors.catEntertainment},
+    {'icon': '🏠', 'label': 'Bills', 'color': context.colors.catBills},
+    {'icon': '💰', 'label': 'Salary', 'color': context.colors.primary},
+    {'icon': '📦', 'label': 'Other', 'color': context.colors.catOther},
   ];
 
   // Filter transactions by selected month/year
@@ -70,7 +71,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   Color _categoryColor(String label) {
     final meta = _categoryMeta.firstWhere(
           (m) => m['label'] == label,
-      orElse: () => {'color': AppColors.catOther},
+      orElse: () => {'color': context.colors.catOther},
     );
     return meta['color'] as Color;
   }
@@ -89,7 +90,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final allTransactionsAsync = ref.watch(transactionsStreamProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -100,20 +101,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(
+                    child: Icon(
                       Icons.arrow_back_ios,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Analytics',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                   ),
@@ -124,7 +125,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.colors.surface,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -140,19 +141,19 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               }
                             });
                           },
-                          child: const Icon(
+                          child: Icon(
                             Icons.chevron_left,
-                            color: AppColors.textSecondary,
+                            color: context.colors.textSecondary,
                             size: 18,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '${_months[_selectedMonth]} $_selectedYear',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            color: context.colors.textPrimary,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -167,9 +168,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               }
                             });
                           },
-                          child: const Icon(
+                          child: Icon(
                             Icons.chevron_right,
-                            color: AppColors.textSecondary,
+                            color: context.colors.textSecondary,
                             size: 18,
                           ),
                         ),
@@ -182,15 +183,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
             Expanded(
               child: allTransactionsAsync.when(
-                loading: () => const Center(
+                loading: () => Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.primary,
+                    color: context.colors.primary,
                   ),
                 ),
                 error: (e, _) => Center(
                   child: Text(
                     'Error: $e',
-                    style: const TextStyle(color: AppColors.expense),
+                    style: TextStyle(color: context.colors.expense),
                   ),
                 ),
                 data: (allTransactions) {
@@ -225,16 +226,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                             Expanded(
                               child: _summaryCard(
                                 'Total Spent',
-                                'Rs ${totalSpent.toStringAsFixed(0)}',
-                                AppColors.expense,
+                                '${ref.watch(currencySymbolProvider)} ${totalSpent.toStringAsFixed(0)}',
+                                context.colors.expense,
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: _summaryCard(
                                 'Total Income',
-                                'Rs ${totalIncome.toStringAsFixed(0)}',
-                                AppColors.income,
+                                '${ref.watch(currencySymbolProvider)} ${totalIncome.toStringAsFixed(0)}',
+                                context.colors.income,
                               ),
                             ),
                           ],
@@ -248,7 +249,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                             AppSpacing.cardPadding,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: context.colors.surface,
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadius,
                             ),
@@ -256,23 +257,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Spending by category',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 16),
                               categorySpent.isEmpty
-                                  ? const Center(
+                                  ? Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(20),
                                   child: Text(
                                     'No expenses this month',
                                     style: TextStyle(
-                                      color: AppColors.textSecondary,
+                                      color: context.colors.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -335,7 +336,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                               ),
                                               Text(
                                                 '${pct.toStringAsFixed(0)}%',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight:
                                                   FontWeight.w500,
@@ -363,7 +364,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                             AppSpacing.cardPadding,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: context.colors.surface,
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadius,
                             ),
@@ -371,12 +372,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Daily spending',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -399,7 +400,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                           child: Container(
                                             height: 70 * h + 2,
                                             decoration: BoxDecoration(
-                                              color: AppColors.primary
+                                              color: context.colors.primary
                                                   .withOpacity(
                                                 h > 0 ? 0.7 : 0.1,
                                               ),
@@ -418,18 +419,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                 mainAxisAlignment:
                                 MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text(
+                                  Text(
                                     '1',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: AppColors.textTertiary,
+                                      color: context.colors.textTertiary,
                                     ),
                                   ),
                                   Text(
                                     '${dailySpent.length}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 10,
-                                      color: AppColors.textTertiary,
+                                      color: context.colors.textTertiary,
                                     ),
                                   ),
                                 ],
@@ -446,7 +447,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                             AppSpacing.cardPadding,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: context.colors.surface,
                             borderRadius: BorderRadius.circular(
                               AppSpacing.borderRadius,
                             ),
@@ -454,23 +455,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Top spending categories',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: context.colors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 12),
                               sortedCategories.isEmpty
-                                  ? const Center(
+                                  ? Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(12),
                                   child: Text(
                                     'No data for this month',
                                     style: TextStyle(
-                                      color: AppColors.textSecondary,
+                                      color: context.colors.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -488,7 +489,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                       children: [
                                         Text(
                                           _categoryIcon(e.key),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 20,
                                           ),
                                         ),
@@ -496,7 +497,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                         Expanded(
                                           child: Text(
                                             e.key,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
                                               color: AppColors
                                                   .textPrimary,
@@ -504,7 +505,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                                           ),
                                         ),
                                         Text(
-                                          'Rs ${e.value.toStringAsFixed(0)}',
+                                          '${ref.watch(currencySymbolProvider)} ${e.value.toStringAsFixed(0)}',
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight:
@@ -541,7 +542,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
       ),
       child: Column(
@@ -549,9 +550,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             ),
           ),
           const SizedBox(height: 6),

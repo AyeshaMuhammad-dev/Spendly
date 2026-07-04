@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/constants/app_colors.dart';
 import '../features/auth/screens/auth_screen.dart';
-import '../features/dashboard/screens/dashboard_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../features/dashboard/screens/main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,7 +16,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-
   late AnimationController _controller;
   late Animation<double> _logoScale;
   late Animation<double> _logoOpacity;
@@ -68,19 +70,49 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Navigate to AuthScreen or DashboardScreen after 3 seconds
-    Future.delayed(const Duration(milliseconds: 3000), () {
+    Future.delayed(const Duration(milliseconds: 3000), () async {
       if (mounted) {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
-          );
+          final prefs = await SharedPreferences.getInstance();
+          final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+
+          if (biometricEnabled) {
+            final localAuth = LocalAuthentication();
+            bool canCheckBiometrics = await localAuth.canCheckBiometrics;
+            bool isSupported = await localAuth.isDeviceSupported();
+
+            if (canCheckBiometrics || isSupported) {
+              bool didAuthenticate = false;
+              try {
+                didAuthenticate = await localAuth.authenticate(
+                  localizedReason: 'Please authenticate to unlock Spendly',
+                );
+              } catch (e) {
+                // Ignore error and stay locked
+              }
+
+              if (!didAuthenticate) {
+                // If they fail to authenticate, we return without navigating.
+                // They are stuck on the splash screen and need to restart the app.
+                return;
+              }
+            }
+          }
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MainScreen()),
+            );
+          }
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AuthScreen()),
-          );
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AuthScreen()),
+            );
+          }
         }
       }
     });
@@ -114,18 +146,17 @@ class _SplashScreenState extends State<SplashScreen>
                         color: AppColors.primaryContainer,
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      child: const Center(
-                        child: Text(
-                          '💰',
-                          style: TextStyle(fontSize: 36),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/logo.jpg',
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 Opacity(
                   opacity: _textOpacity.value,
                   child: Transform.translate(
@@ -141,13 +172,11 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Opacity(
                   opacity: _taglineOpacity.value,
                   child: const Text(
-                    'Track every rupee',
+                    'Track every coin',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,

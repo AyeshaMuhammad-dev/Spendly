@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../data/transaction_model.dart';
 import '../providers/transaction_provider.dart';
+import '../../../core/providers/settings_provider.dart';
 class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});
 
@@ -67,7 +68,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _showDetail(TransactionModel t) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -80,7 +81,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.divider,
+                color: context.colors.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -89,36 +90,36 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             const SizedBox(height: 12),
             Text(
               t.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               t.category,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: context.colors.textSecondary,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              '${!t.isExpense ? '+' : '-'}Rs ${t.amount.toStringAsFixed(0)}',
+              '${!t.isExpense ? '+' : '-'}${ref.watch(currencySymbolProvider)} ${t.amount.toStringAsFixed(0)}',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
-                color: !t.isExpense ? AppColors.income : AppColors.expense,
+                color: !t.isExpense ? context.colors.income : context.colors.expense,
                 letterSpacing: -1,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _formatDate(t.date),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: context.colors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
@@ -133,16 +134,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           .deleteTransaction(t.id);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Transaction deleted'),
-                            backgroundColor: AppColors.expense,
+                          SnackBar(
+                            content: const Text('Transaction deleted'),
+                            backgroundColor: context.colors.expense,
                           ),
                         );
                       }
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.expense),
-                      foregroundColor: AppColors.expense,
+                      side: BorderSide(color: context.colors.expense),
+                      foregroundColor: context.colors.expense,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(
@@ -177,7 +178,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final transactionsAsync = ref.watch(transactionsStreamProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -186,30 +187,31 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               padding: const EdgeInsets.all(AppSpacing.pagePadding),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.textPrimary,
-                        size: 20,
+                  if (Navigator.of(context).canPop())
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        margin: const EdgeInsets.only(right: 16),
+                        decoration: BoxDecoration(
+                          color: context.colors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: context.colors.textPrimary,
+                          size: 20,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Transactions',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                   ),
@@ -225,17 +227,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
               child: TextField(
                 controller: _searchController,
-                style: const TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: context.colors.textPrimary),
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
                   hintText: 'Search transactions',
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.search,
-                    color: AppColors.textTertiary,
+                    color: context.colors.textTertiary,
                     size: 20,
                   ),
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: context.colors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(
                       AppSpacing.borderRadiusSm,
@@ -275,8 +277,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primary
-                            : AppColors.surface,
+                            ? context.colors.primary
+                            : context.colors.surface,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Center(
@@ -287,7 +289,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             fontWeight: FontWeight.w500,
                             color: isSelected
                                 ? Colors.black
-                                : AppColors.textSecondary,
+                                : context.colors.textSecondary,
                           ),
                         ),
                       ),
@@ -302,16 +304,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             // Transaction list
             Expanded(
               child: transactionsAsync.when(
-                loading: () => const Center(
+                loading: () => Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.primary,
+                    color: context.colors.primary,
                   ),
                 ),
                 error: (e, _) => Center(
                   child: Text(
                     'Error: $e',
                     style:
-                    const TextStyle(color: AppColors.expense),
+                    TextStyle(color: context.colors.expense),
                   ),
                 ),
                 data: (transactions) {
@@ -319,11 +321,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   final grouped = _groupByDate(filtered);
 
                   if (filtered.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Text(
                         'No transactions found',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                     );
@@ -343,10 +345,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             ),
                             child: Text(
                               entry.key,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
+                                color: context.colors.textSecondary,
                               ),
                             ),
                           ),
@@ -374,7 +376,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: AppColors.expense,
+          color: context.colors.expense,
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Icon(Icons.delete_outline, color: Colors.white),
@@ -388,9 +390,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         onTap: () => _showDetail(t),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: AppColors.divider, width: 0.5),
+              bottom: BorderSide(color: context.colors.divider, width: 0.5),
             ),
           ),
           child: Row(
@@ -400,8 +402,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 height: 42,
                 decoration: BoxDecoration(
                   color: !t.isExpense
-                      ? AppColors.primaryContainer
-                      : AppColors.expenseContainer,
+                      ? context.colors.primaryContainer
+                      : context.colors.expenseContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -418,30 +420,30 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   children: [
                     Text(
                       t.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                     Text(
                       t.category,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
               Text(
-                '${!t.isExpense ? '+' : '-'}Rs ${t.amount.toStringAsFixed(0)}',
+                '${!t.isExpense ? '+' : '-'}${ref.watch(currencySymbolProvider)} ${t.amount.toStringAsFixed(0)}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: !t.isExpense
-                      ? AppColors.income
-                      : AppColors.expense,
+                      ? context.colors.income
+                      : context.colors.expense,
                 ),
               ),
             ],

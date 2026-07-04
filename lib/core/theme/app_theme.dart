@@ -146,13 +146,13 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
 
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: Colors.white,
         secondary: AppColors.primary,
         onSecondary: Colors.white,
         surface: Colors.white,
-        onSurface: const Color(0xFF1A1A1A),
+        onSurface: Color(0xFF1A1A1A),
         error: AppColors.error,
         onError: Colors.white,
       ),

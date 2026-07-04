@@ -28,38 +28,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: context.colors.expense,
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Name cannot be empty'),
-          backgroundColor: AppColors.expense,
+        SnackBar(
+          content: const Text('Name cannot be empty'),
+          backgroundColor: context.colors.expense,
         ),
       );
       return;
     }
     setState(() => _isLoading = true);
     try {
-      // Save to Firebase
-      await FirebaseAuth.instance.currentUser
-          ?.updateDisplayName(_nameController.text.trim());
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
-            backgroundColor: AppColors.income,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
+      final user = FirebaseAuth.instance.currentUser;
+      // Update Firebase Auth profile
+      await user?.updateDisplayName(_nameController.text.trim());
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.expense,
+            content: const Text('Profile updated successfully (locally)'),
+            backgroundColor: context.colors.income,
           ),
         );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -71,22 +77,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.colors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios,
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Edit Profile',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: context.colors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -97,51 +103,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         padding: const EdgeInsets.all(AppSpacing.pagePadding),
         child: Column(
           children: [
-            const SizedBox(height: 20),
-
-            // Profile photo
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryContainer,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary,
-                        width: 2,
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '👤',
-                        style: TextStyle(fontSize: 40),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.black,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 40),
+            const SizedBox(height: 10),
 
             // Name field
             _buildTextField(
@@ -170,7 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: context.colors.primary,
                   foregroundColor: Colors.black,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(
@@ -213,9 +175,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: AppColors.textSecondary,
+            color: context.colors.textSecondary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -225,18 +187,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           readOnly: readOnly,
           style: TextStyle(
             color: readOnly
-                ? AppColors.textSecondary
-                : AppColors.textPrimary,
+                ? context.colors.textSecondary
+                : context.colors.textPrimary,
             fontSize: 15,
           ),
           decoration: InputDecoration(
             prefixIcon: Icon(
               icon,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
               size: 20,
             ),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: context.colors.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
